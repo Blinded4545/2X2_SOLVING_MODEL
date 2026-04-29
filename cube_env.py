@@ -33,19 +33,3 @@ class CubeEnv:
         done = solved
         return obs, reward, done
     
-    
-class DQN(nn.Module):
-    def __init__(self, num_inputs, num_actions):
-        super(DQN, self).__init__()
-        self.net = nn.Sequential(
-            nn.Linear(144, 512),
-            nn.ReLU(),
-            nn.Linear(512, 512),
-            nn.ReLU(),
-            nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.Linear(256, 12)
-        )
-    
-    def forward(self, x):
-        return self.net(x)
