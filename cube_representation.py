@@ -15,10 +15,6 @@ new_cube = cube()
 
 new_cube.print_cube()
 
-new_cube.move_r()
-new_cube.move_u()
-new_cube.move_r_inv()
-new_cube.move_u_inv()
 
 new_cube.print_cube()
 new_cube.plt_faces()

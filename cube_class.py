@@ -185,6 +185,9 @@ class cube:
     def is_solved(self):
         return all(len(set(face)) == 1 for face in self.faces)
     
+    def distance(self):
+        return sum([len(set(face))-1 for face in self.faces])
+    
     def print_cube(self):
         print_net(self.faces)
         print('\n')

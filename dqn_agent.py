@@ -7,6 +7,9 @@ from collections import deque
 class ReplayBuffer:
     def __init__(self, capacity=50000):
         self.buffer = deque(maxlen=capacity)
+        
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
     
     def add(self, state, action, reward, next_state, done):
         self.buffer.append((state, action, reward, next_state, done))
@@ -16,11 +19,11 @@ class ReplayBuffer:
         states, actions, rewards, next_states, dones = zip(*batch)
         
         return(
-            torch.tensor(np.array(states), dtype=torch.float32),
-            torch.tensor(np.array(actions), dtype=torch.long),
-            torch.tensor(np.array(rewards), dtype=torch.float32),
-            torch.tensor(np.array(next_states), dtypes=torch.float32),
-            torch.tensor(np.array(dones), dtype=torch.float32)
+            torch.from_numpy(np.array(states)).float().to(self.device),
+            torch.from_numpy(np.array(actions)).long().to(self.device),
+            torch.from_numpy(np.array(rewards)).float().to(self.device),
+            torch.from_numpy(np.array(next_states)).float().to(self.device),
+            torch.from_numpy(np.array(dones)).float().to(self.device)
         )
     
     def __len__(self):
@@ -28,23 +31,23 @@ class ReplayBuffer:
     
     
 class DQN(nn.Module):
-    def __init__(self, num_inputs, num_actions):
+    def __init__(self, num_inputs=144, num_actions=12):
         super(DQN, self).__init__()
         self.net = nn.Sequential(
-            nn.Linear(144, 512),
+            nn.Linear(num_inputs, 256),
             nn.ReLU(),
-            nn.Linear(512, 512),
+            nn.Linear(256, 512),
             nn.ReLU(),
             nn.Linear(512, 256),
             nn.ReLU(),
-            nn.Linear(256, 12)
+            nn.Linear(256, num_actions)
         )
     
     def forward(self, x):
         return self.net(x)
     
 class DQNAgent:
-    def __init__(self, lr=1e-4, gamma=0.99, epsilon=1.0, epsilon_min=0.05, epsilon_decay=0.995, batch_size=64, target_update_freq=500):
+    def __init__(self, lr=1e-4, gamma=0.99, epsilon=1.0, epsilon_min=0.05, epsilon_decay=0.995, batch_size=64, target_update_freq=200):
         
         self.gamma = gamma
         self.epsilon = epsilon
@@ -53,11 +56,13 @@ class DQNAgent:
         self.batch_size = batch_size
         self.target_update_freq = target_update_freq
         self.steps_done = 0
+        self.rewards_per_episode = []
+        self.success_history = []
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         
-        self.net      = DQN().to(self.device)
-        self.target_net = DQN().to(self.device)
+        self.net = DQN(num_inputs=144, num_actions=12).to(self.device)
+        self.target_net = DQN(144, 12).to(self.device)
         self.target_net.load_state_dict(self.net.state_dict())  # pesos iguales al inicio
         self.target_net.eval()  # la target nunca se entrena directamente
 
@@ -79,23 +84,18 @@ class DQNAgent:
         
         states, actions, rewards, next_states, dones = self.buffer.sample(self.batch_size)
         
-        states = states.to(self.device)
-        actions = actions.to(self.device)
-        rewards = rewards.to(self.device)
-        next_states = next_states.to(self.device)
-        dones = dones.to(self.device)
-        
         current_Q = self.net(states).gather(1, actions.unsqueeze(1)).squeeze(1)
         
         with torch.no_grad():
-            next_q = self.target_net(next_states).max(1).values
+            next_actions = self.net(next_states).argmax(1)
+            next_q = self.target_net(next_states).gather(1, next_actions.unsqueeze(1)).squeeze(1)
             
         target_q = rewards + self.gamma*next_q*(1-dones)
         
-        loss = nn.MSELoss()(current_Q, target_q)
+        loss = nn.SmoothL1Loss()(current_Q, target_q)
         
         self.optimizer.zero_grad()
-        loss.backward()
+        loss.backward() #NO CAMBIAR A SMOOTHL1LOSS
         
         self.optimizer.step()
         
@@ -106,7 +106,7 @@ class DQNAgent:
         return loss.item()
     
     def decay_epsilon(self):
-        self.epsion = max(self.epsilon_min, self.epsion*self.epsiolon_decay)
+        self.epsilon = max(self.epsilon_min, self.epsilon*self.epsilon_decay)
         
     def save(self, path="model.pth"):
         torch.save(self.net.state_dict(), path)
