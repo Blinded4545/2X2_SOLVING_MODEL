@@ -1,6 +1,6 @@
-from dqn_agent import DQNAgent
+from SIMPLEDQN.dqn_agent import DQNAgent
 from cube_env import CubeEnv
-from rewards_analysis import graphicate
+from SIMPLEDQN.rewards_analysis import graphicate
 import numpy as np
 
 np.random.seed(0)

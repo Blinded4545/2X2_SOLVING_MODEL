@@ -6,12 +6,13 @@ import torch.nn as nn
 from cube_class import cube
 
 class CubeEnv:
-    def __init__(self, scramble_depth=1, max_steps=30):
+    def __init__(self, scramble_depth=2, max_steps=30, ndim = 3):
         self.max_steps = max_steps
         self.scramble_depth = scramble_depth
         self.steps = 0
         self.last_action = None # IMPLEMENTAR LUEGO
-        self.cube = cube()
+        self.ndim = ndim
+        self.cube = cube(ndim=ndim)
         self.moves = [
             self.cube.move_u, self.cube.move_u_inv,
             self.cube.move_r, self.cube.move_r_inv,
@@ -35,15 +36,22 @@ class CubeEnv:
     
     def reset(self):
         self.steps = 0
-        self.cube = cube()
+        self.cube = cube(self.ndim)
         last_move = None
-        for _ in range(self.scramble_depth):
+        moves_done=[]
+        for i in range(self.scramble_depth):
             move = random.randint(0, 11)
             if last_move is not None and self.is_inverse(move, last_move):
                 continue
             
             getattr(self.cube, self.move_names[move])()
+            
             last_move = move
+            moves_done.append(self.move_names[move])
+            
+        print(moves_done)
+        self.cube.plt_faces(i, self.move_names[move])
+        
         
         return self.cube.to_one_hot()
     
@@ -61,14 +69,21 @@ class CubeEnv:
         else:
             reward = prev_dist - new_dist
             done = False
-            
-        # if action == self.last_action:
-        #     reward-=0.5
-            
-        # self.last_action = action
         
         self.steps += 1
         if self.steps >= self.max_steps:
-            done = True
+            done = False
         return obs, reward, done
     
+    def test_moves(self):
+        self.cube = cube(ndim=self.ndim)
+        moves_done = []
+        for i in range(12):
+            j = random.randint(0, 11)
+            while j in moves_done: 
+                j = random.randint(0, 11)
+            
+            getattr(self.cube, self.move_names[j])()
+            moves_done.append(j)
+            print(self.move_names[j])
+            self.cube.plt_faces(i, self.move_names[j])

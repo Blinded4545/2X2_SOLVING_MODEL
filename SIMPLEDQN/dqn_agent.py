@@ -30,22 +30,52 @@ class ReplayBuffer:
         return len(self.buffer)
     
     
-class DQN(nn.Module):
+# class DQN(nn.Module):
+#     def __init__(self, num_inputs=144, num_actions=12):
+#         super(DQN, self).__init__()
+#         self.net = nn.Sequential(
+#             nn.Linear(num_inputs, 256),
+#             nn.ReLU(),
+#             nn.Linear(256, 512),
+#             nn.ReLU(),
+#             nn.Linear(512, 256),
+#             nn.ReLU(),
+#             nn.Linear(256, num_actions)
+#         )
+    
+#     def forward(self, x):
+#         return self.net(x)
+    
+class DuelingDQN(nn.Module):
     def __init__(self, num_inputs=144, num_actions=12):
-        super(DQN, self).__init__()
-        self.net = nn.Sequential(
+        super(DuelingDQN, self).__init__()
+        
+        self.feature = nn.Sequential(
             nn.Linear(num_inputs, 256),
             nn.ReLU(),
-            nn.Linear(256, 512),
+            nn.Linear(256, 256),
+            nn.ReLU()
+        )
+        
+        self.value = nn.Sequential(
+            nn.Linear(256, 128),
             nn.ReLU(),
-            nn.Linear(512, 256),
+            nn.Linear(128, 1)
+        )
+        
+        self.advantage = nn.Sequential(
+            nn.Linear(256, 128),
             nn.ReLU(),
-            nn.Linear(256, num_actions)
+            nn.Linear(128, num_actions)
         )
     
     def forward(self, x):
-        return self.net(x)
-    
+        x = self.feature(x)
+        v = self.value(x)
+        A = self.advantage(x)
+        Q = v+(A - A.mean(dim=1, keepdim=True))
+        
+        return Q
 class DQNAgent:
     def __init__(self, lr=1e-4, gamma=0.99, epsilon=1.0, epsilon_min=0.05, epsilon_decay=0.995, batch_size=64, target_update_freq=200):
         
@@ -61,8 +91,8 @@ class DQNAgent:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         
-        self.net = DQN(num_inputs=144, num_actions=12).to(self.device)
-        self.target_net = DQN(144, 12).to(self.device)
+        self.net = DuelingDQN(num_inputs=144, num_actions=12).to(self.device)
+        self.target_net = DuelingDQN(144, 12).to(self.device)
         self.target_net.load_state_dict(self.net.state_dict())  # pesos iguales al inicio
         self.target_net.eval()  # la target nunca se entrena directamente
 
