@@ -17,12 +17,12 @@ class cube:
         self.faces=[np.full((ndim, ndim), i+1) for i in range(6)]
         
         self.color_map = {
-            1: "blue",
+            1: "yellow",
             2: "orange",
-            3: "white",
+            3: "blue",
             4: "red",
-            5: "green",
-            6: "yellow"
+            5: "white",
+            6: "green"
         }
     
     def move_r(self):
@@ -275,7 +275,75 @@ class cube:
             faces.append(face)
         
         self.faces = faces
+    
+    def is_cross_solved(self):
+        n = self.ndim
+        c = n//2
         
+        lateral_faces = [1, 2, 3, 5]
+        for idx in lateral_faces:
+            face = self.faces[idx]
+            center_color = int(face[c, c])
+            bottom_edge = int(face[n-1, c])
+            
+            if bottom_edge != center_color:
+                return False
+        
+        down = self.faces[4]
+        down_color = int(down[c, c])
+        cross_cells = [down[0, c], down[c, 0], down[c, n-1], down[n-1, c]]
+        
+        if not all(int(cell) == down_color for cell in cross_cells):
+            return False
+        
+        return True
+    
+    def is_f2l_solved(self):
+        n = self.ndim
+        c = n//2
+        
+        lateral_faces = [1, 2, 3, 5]
+        for idx in lateral_faces:
+            face = self.faces[idx]
+            center_color = int(face[c, c])
+            lower_half = np.concatenate(face[1, :])
+            if np.mean(lower_half) != center_color:
+                return False
+            
+        down = self.faces[4]
+        down_color = int(down[c, c])
+        for i in range(n):
+            if not all (down[i, :] == down_color):
+                return False
+        
+        return True
+    
+    def is_oll_cross_solved(self): #ESTO ES PARA EL FRIDRICH REDUCIDO
+        n = self.ndim
+        c = n//2
+        
+        top = self.faces[0]
+        top_color = int(top[c, c])
+        cross_cells = [top[0, c], top[c, 0], top[c, n-1], top[n-1, c]]
+        
+        if not all(int(cell) == top_color for cell in cross_cells):
+            return False
+        
+        return True
+    
+    
+    def is_oll_solved(self):
+        n = self.ndim
+        c = n//2
+        
+        top = self.faces[0]
+        top_color = int(top[c, c])
+        
+        if not all(top == top_color):
+            return False
+        
+        return True
+    
     def is_solved(self):
         for face in self.faces:
             if not np.all(face == face[0,0]):

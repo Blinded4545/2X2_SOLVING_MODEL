@@ -49,8 +49,8 @@ class CubeEnv:
             last_move = move
             moves_done.append(self.move_names[move])
             
-        print(moves_done)
-        self.cube.plt_faces(i, self.move_names[move])
+        # print(moves_done)
+        # self.cube.plt_faces(i, self.move_names[move])
         
         
         return self.cube.to_one_hot()
